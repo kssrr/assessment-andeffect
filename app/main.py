@@ -2,17 +2,10 @@ from datetime import date
 from fastapi import FastAPI, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import get_db
 from app import models, schemas
 
 app = FastAPI()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @app.get("/")
 def root():
@@ -37,6 +30,6 @@ def list_items(
         query = query.filter(models.Availability.service.in_(service))
 
     total = query.count()
-    result = query.order_by(models.Availability.date).offset(offset).limit(limit)
+    result = query.order_by(models.Availability.date).offset(offset).limit(limit).all()
 
     return {"total": total, "limit": limit, "offset": offset, "results": result}
