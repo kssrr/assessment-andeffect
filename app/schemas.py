@@ -7,3 +7,9 @@ class AvailabilityResponse(BaseModel):
     availability: float
 
     model_config = {"from_attributes": True}
+
+class AvailabilityPage(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    results: list[AvailabilityResponse]

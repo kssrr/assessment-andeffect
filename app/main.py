@@ -18,11 +18,13 @@ def get_db():
 def root():
     return {"status": "ok"}
 
-@app.get("/list", response_model=list[schemas.AvailabilityResponse])
+@app.get("/list", response_model=schemas.AvailabilityPage)
 def list_items(
     dmin: date | None = Query(None, description="From (YYYY-MM-DD)"),
     dmax: date | None = Query(None, description="From (YYYY-MM-DD)"),
-    service: str | None = Query(None, description="Service"),
+    service: list[str] | None = Query(None, description="Service(s)"),
+    limit: int = Query(100, ge=1, le=1000, description="Max results to return"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Availability)
@@ -32,8 +34,9 @@ def list_items(
     if dmax is not None:
         query = query.filter(models.Availability.date <= dmax)
     if service is not None:
-        query = query.filter(models.Availability.service == service)
+        query = query.filter(models.Availability.service.in_(service))
 
-    result = query.all()
+    total = query.count()
+    result = query.order_by(models.Availability.date).offset(offset).limit(limit)
 
-    return result
+    return {"total": total, "limit": limit, "offset": offset, "results": result}
