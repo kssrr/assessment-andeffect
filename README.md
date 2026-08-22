@@ -31,3 +31,10 @@ sqlite> select MIN(date) as start_date, MAX(date) as end_date from service_avail
 2000-01-01|2021-02-28
 
 ```
+
+# Design
+
+Für die DB-File, `COPY` oder bind mount?
+* Daten sind klein (1,3M) und wir sind read-only, können einfach kopieren (dann ist DB auch versioniert & keine harten Path dependencies)
+* Sollte DB drastisch größer werden oder PUT-Funktionalität kommen dann zu bind/volume mount wechseln (writes passieren aktuell im Image Layer und sind nicht persistent)
+
