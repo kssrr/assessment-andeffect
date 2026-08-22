@@ -17,6 +17,6 @@ def get_db():
 def root():
     return {"status": "ok"}
 
-@app.get("/items", response_model=list[schemas.ItemOut])
+@app.get("/items", response_model=list[schemas.AvailabilityOut])
 def list_items(db: Session = Depends(get_db)):
-    return db.query(models.Item).all()
+    return db.query(models.Availability).all()

@@ -38,3 +38,7 @@ Für die DB-File, `COPY` oder bind mount?
 * Daten sind klein (1,3M) und wir sind read-only, können einfach kopieren (dann ist DB auch versioniert & keine harten Path dependencies)
 * Sollte DB drastisch größer werden oder PUT-Funktionalität kommen dann zu bind/volume mount wechseln (writes passieren aktuell im Image Layer und sind nicht persistent)
 
+App-Aufbau:
+
+* `models`: SQLAlchemy-Models
+* `schemas`: PyDantic Models/Schemas

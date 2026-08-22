@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Date, String, Float
 from app.database import Base
 
-class Item(Base):
-    __tablename__ = "items"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+class Availability(Base):
+    __tablename__ = "service_availabilities"
+    date = Column(Date, primary_key=True, index=True)
+    service = Column(String, primary_key=True, index=True)
+    availability = Column(Float)
