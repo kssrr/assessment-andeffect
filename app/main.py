@@ -30,6 +30,6 @@ def list_items(
         query = query.filter(models.Availability.service.in_(service))
 
     total = query.count()
-    result = query.order_by(models.Availability.date).offset(offset).limit(limit).all()
+    result = query.order_by(models.Availability.date, models.Availability.service).offset(offset).limit(limit).all()
 
     return {"total": total, "limit": limit, "offset": offset, "results": result}
