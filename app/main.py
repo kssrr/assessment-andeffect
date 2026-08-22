@@ -1,5 +1,5 @@
 from datetime import date
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,6 +20,10 @@ def list_items(
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     db: Session = Depends(get_db)
 ):
+
+    if dmin is not None and dmax is not None and dmin > dmax:
+        raise HTTPException(status_code=422, detail="dmin must be <= dmax")
+
     query = db.query(models.Availability)
 
     if dmin is not None:

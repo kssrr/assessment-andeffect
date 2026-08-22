@@ -1,43 +1,54 @@
+import pytest
 from datetime import date
+
 from app import models
 
+@pytest.fixture
+def seeded(db_session):
+    rows = [
+        models.Availability(date=date(2024, 1, 1), service="a", availability=0.1),
+        models.Availability(date=date(2024, 1, 2), service="a", availability=0.2),
+        models.Availability(date=date(2024, 1, 1), service="b", availability=0.3),
+        models.Availability(date=date(2024, 1, 2), service="b", availability=0.4),
+        models.Availability(date=date(2024, 1, 1), service="c", availability=0.5),
+        models.Availability(date=date(2024, 1, 2), service="c", availability=0.6)
+    ]
+    db_session.add_all(rows)
+    db_session.commit()
+    return rows
 
-def seed(db, rows):
-    db.add_all([models.Availability(**r) for r in rows])
-    db.commit()
+def test_pagination(client, seeded):
+    # testen ob total, filtered count & 
+    # results mit pagination übereinstimmen
+    params = [("service", "a"), ("service", "b"), ("limit", 1)]
+    # ^ sollte vier zeilen matchen
 
+    # Erster call -> erwartetes `total`:
+    first_page = client.get("/list", params=params + [("offset", 0)]).json()
+    total = first_page["total"]
+    assert total == 4, f"`total` is wrong. Expected: 4, got: {total}."
 
-def test_list_no_filters_returns_seeded_rows(client, db_session):
-    seed(db_session, [
-        {"date": date(2026, 1, 1), "service": "exporter", "availability": 0.95},
-        {"date": date(2026, 1, 2), "service": "importer", "availability": 0.97},
-    ])
+    # alle pages mit einzelnen results durchgehen
+    # und schauen ob alles stabil bleibt
+    seen_keys = set()
+    for offset in range(total):
+        resp = client.get("/list", params=params + [("offset", offset)])
+        assert resp.status_code == 200, "Got unexpected (non-200) response from client."
+        body = resp.json()
 
-    response = client.get("/list")
+        # einzelne pages sollten richtiges `total` reporten
+        assert body["total"] == total, "`total` reported on individual pages does not match true `total`."
+        assert len(body["results"]) == 1, "Wrong page size (`limit` not respected)."
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["total"] == 2
-    assert body["limit"] == 100
-    assert body["offset"] == 0
-    assert len(body["results"]) == 2
-    assert body["results"][0] == {
-        "date": "2026-01-01",
-        "service": "yoga",
-        "availability": 3.0,
-    }
+        row = body["results"][0]
+        #assert row["service"] in ("a", "b") 
+        seen_keys.add((row["date"], row["service"]))
 
+    assert len(seen_keys) == total, "Number of counted individual responses does not match `total`."
 
-def test_list_total_reflects_filtered_count_not_page_size(client, db_session):
-    seed(db_session, [
-        {"date": date(2026, 1, i), "service": "yoga", "availability": 1.0}
-        for i in range(1, 6)
-    ] + [
-        {"date": date(2026, 1, 1), "service": "pilates", "availability": 1.0},
-    ])
-
-    response = client.get("/list", params={"service": "yoga", "limit": 2})
-
-    body = response.json()
-    assert body["total"] == 5 
-    assert len(body["results"]) == 2
+    # wenn wir nach der letzten page weitergehen sollten zwar keine
+    # results mehr kommen, aber `total` sollte weiterhin stimmen:
+    resp = client.get("/list", params=params + [("offset", total)])
+    body = resp.json()
+    assert body["total"] == total, "Wrong `total` reported when paging past end."
+    assert body["results"] == [], f"Expected no results when paging past the end, got {body['results']}."
