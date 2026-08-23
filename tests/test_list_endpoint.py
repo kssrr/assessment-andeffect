@@ -52,3 +52,12 @@ def test_pagination(client, seeded):
     body = resp.json()
     assert body["total"] == total, "Wrong `total` reported when paging past end."
     assert body["results"] == [], f"Expected no results when paging past the end, got {body['results']}."
+
+def test_service_param(client, seeded):
+    resp = client.get("/list", params=[("service", "a"), ("service", "b")])
+    body = resp.json()
+
+    returned_services = {r["service"] for r in body["results"]}
+    assert returned_services == {"a", "b"}, f"expected only services a/b, got {returned_services}"
+    assert body["total"] == 4, f"expected 4 rows for service a or b, got {body['total']}"
+    assert body["total"] < len(seeded), "service filter appears to be ignored"
