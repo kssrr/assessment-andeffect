@@ -1,44 +1,53 @@
+# About
 
-DB:
+Small FastAPI service for querying service-availability data from a SQLite database with filtering and pagination. Built with FastAPI, SQLAlchemy, and Pydantic; tested with pytest against an in-memory SQLite DB, and containerized via Docker with separate build stages for running the API and running tests.
 
-```sql
-sqlite> .schema
-CREATE TABLE service_availabilities (
-	date DATE, 
-	service TEXT, 
-	availability FLOAT
-);
+# Running the API
 
-sqlite> .tables
-service_availabilities
-
-sqlite> select * from service_availabilities limit 5;
-2000-01-01|pdf_generator|95.43
-2000-01-01|report_importer|96.78
-2000-01-01|report_exporter|98.62
-2000-01-02|pdf_generator|97.25
-2000-01-02|report_importer|98.25
-
-sqlite> select distinct service from service_availabilities;
-pdf_generator
-report_importer
-report_exporter
-
-sqlite> select MIN(availability) as min_av, MAX(availability) as max_av from service_availabilities;
-95.0|100.0
-
-sqlite> select MIN(date) as start_date, MAX(date) as end_date from service_availabilities;
-2000-01-01|2021-02-28
+To run the API:
 
 ```
+docker compose up backend
+```
 
-# Design
+The API will be available at `https://localhost:8000` (interactive docs at `/docs`).
 
-Für die DB-File, `COPY` oder bind mount?
-* Daten sind klein (1,3M) und wir sind read-only, können einfach kopieren (dann ist DB auch versioniert & keine harten Path dependencies)
-* Sollte DB drastisch größer werden oder PUT-Funktionalität kommen dann zu bind/volume mount wechseln (writes passieren aktuell im Image Layer und sind nicht persistent)
+To run the tests:
 
-App-Aufbau:
+```
+docker compose run --rm test
+```
 
-* `models`: SQLAlchemy-Models
-* `schemas`: PyDantic Models/Schemas
+# Example usage
+
+```
+$ curl -s "http://localhost:8000/list?dmin=2020-01-01&service=pdf_generator&service=report_exporter&limit=4&offset=80" | jq
+{
+  "total": 850,
+  "limit": 4,
+  "offset": 80,
+  "results": [
+    {
+      "date": "2020-02-10",
+      "service": "pdf_generator",
+      "availability": 97.11
+    },
+    {
+      "date": "2020-02-10",
+      "service": "report_exporter",
+      "availability": 99.6
+    },
+    {
+      "date": "2020-02-11",
+      "service": "pdf_generator",
+      "availability": 96.13
+    },
+    {
+      "date": "2020-02-11",
+      "service": "report_exporter",
+      "availability": 97.89
+    }
+  ]
+}
+
+```
